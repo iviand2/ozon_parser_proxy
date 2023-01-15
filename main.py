@@ -1,15 +1,12 @@
-import os
 import threading
 import logging
 import time
 import pandas as pd
 import queue
-import selenium.common.exceptions
 import searcher_new as searcher
 import math
 import data.config as config
 from PySimpleGUI import PopupGetFile
-import PySimpleGUI as Sg
 
 
 logging.basicConfig(filename='SEND ME TO ADMIN.log',
@@ -84,10 +81,12 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
                     w.join()
 
         if data:
-            frame = data.pop()
-            for appended in data:
+            frame, not_found = data.pop()
+            for appended, not_found_appended in data:
                 frame = frame.append(appended)
+                not_found = not_found.append(not_found_appended)
             frame.to_excel('result.xlsx')
+            not_found.to_excel('not_found.xlsx')
 
 
 def search(work, proxy):
@@ -101,36 +100,10 @@ def search_queue(work, proxy, break_after_first, data):
             time.sleep(1)
             continue
         else:
-            try:
-                searcher_bot = searcher.Searcher(proxy=proxy)
-            except selenium.common.exceptions.SessionNotCreatedException as Ex:
-                update_webdriver_lock.acquire()
-                if 'session not created: This version of ChromeDriver only supports' in Ex.msg:
-                    cuted_ex = Ex.msg.split('\n')[1].split(' ')
-                    version = ''
-                    for word in cuted_ex:
-                        if len(word.split('.')) == 4:
-                            version = word
-                            break
-                    import zipfile
-                    import requests
-                    versions_frame = pd.read_xml('https://chromedriver.storage.googleapis.com/')
-                    actual_versions = versions_frame.dropna(subset=['Key']).query(
-                        f'Key.str.contains("{".".join(version.split(".")[:-1])}") & Key.str.contains("win32.zip")')
-                    last_version_address = actual_versions.iloc[-1]['Key']
-                    resp = requests.get(f'https://chromedriver.storage.googleapis.com/{last_version_address}')
-                    with open('temp', 'wb') as file:
-                        file.write(resp.content)
-                    zipp = zipfile.ZipFile('temp')
-                    zipp.extractall()
-                    zipp.close()
-                    os.remove('temp')
-                update_webdriver_lock.release()
-                searcher_bot = searcher.Searcher(proxy=proxy)
-
-            result = searcher_bot.start_queue(work, break_after_first)
+            searcher_bot = searcher.Searcher()
+            result, not_found = searcher_bot.start_queue(work, break_after_first)
             with lock:
-                data.append(result)
+                data.append((result, not_found))
 
 
 def function_to_thread(func, args, data):
@@ -141,16 +114,9 @@ if __name__ == '__main__':
     try:
         file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.')
         fr = pd.read_excel(file, index_col=0)
-        break_after_first = False
         doubling = False
-        break_after_first = True if Sg.PopupYesNo('Прерываемся после второго найденного?') == 'Yes' else False
-        thread_col = 0
-        try:
-            thread_col = int(Sg.PopupGetText("Пожалуйста, укажите требуемое количество потоков"))
-            if thread_col > len(config.proxies):
-                thread_col = 0
-        except Exception as ex:
-            logging.exception(ex, stack_info=True)
+        break_after_first = True  # if Sg.PopupYesNo('Прерываемся после второго найденного?') == 'Yes' else False
+        thread_col = 1
         queue = queue.SimpleQueue()
         if fr.empty:
             [queue.put((c, '')) for c in fr.index]
