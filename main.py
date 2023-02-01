@@ -93,7 +93,7 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
             for appended, not_found_appended in data:
                 frame = frame.append(appended)
                 not_found = not_found.append(not_found_appended)
-            # TODO Прописать джоин appended frame к результатам поиска
+            # Прописать джоин appended frame к результатам поиска
             if frame is not None:
                 if file:
                     appended_frame = appended_frame.set_index('offer')
