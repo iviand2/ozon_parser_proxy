@@ -28,13 +28,13 @@ def pop_list(list_to_pop, num):
 
 def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: int, doubling: bool, file=''):
     if file:
-        appended_frame = pd.read_excel(file)
+        appended_frame = pd.read_excel(file, converters={0: str})
         cols = appended_frame.columns
         appended_frame = appended_frame.rename(
             columns={cols[0]: 'offer',
                      cols[1]: 'brand',
                      cols[2]: 'code_1c',
-                     cols[3]: 'name_start'}).astype({'offer': str})
+                     cols[3]: 'name_start'})
     proxies = config.proxies * 2 if doubling else config.proxies
     proxies = proxies[:thread_col] if (thread_col != 0) and (thread_col > 0) else proxies
     if type(work) is list:
@@ -130,7 +130,8 @@ def function_to_thread(func, args, data):
 if __name__ == '__main__':
     try:
         file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.')
-        fr = pd.read_excel(file, index_col=0)
+        fr = pd.read_excel(file, converters={0: str})
+        fr = fr.set_index(fr.columns[0])
         doubling = False
         break_after_first = True  # if Sg.PopupYesNo('Прерываемся после второго найденного?') == 'Yes' else False
         thread_col = 1

@@ -124,7 +124,7 @@ class Searcher:
                 offer_name = [
                     c for c in offer['mainState'] if ('id' in c.keys()) and (c['id'] == 'name')
                 ] \
-                    [0]['atom']['textAtom']['text'].replace('&#x2f;', '/')
+                    [0]['atom']['textAtom']['text'].replace('&#x2F;', '/').replace('&#34;', '"')
                 if find_count == 4:
                     break
                 if offer_name:

@@ -1,6 +1,6 @@
 set PYTHONOPTIMIZE=1 && ^
 pyinstaller ^
--n "Ozon parser local V2-04" ^
+-n "Ozon parser local V2-06" ^
 --console ^
 --exclude-module matplotlib ^
 --onefile ^
