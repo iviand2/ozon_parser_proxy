@@ -1,0 +1,9 @@
+/*.xlsx
+/*.xlsx#
+/dist/
+/build/
+/chromedriver.exe
+/*.log
+/*.spec
+/.idea
+/*.csv

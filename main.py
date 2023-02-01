@@ -26,7 +26,15 @@ def pop_list(list_to_pop, num):
     return data
 
 
-def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: int, doubling: bool):
+def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: int, doubling: bool, file=''):
+    if file:
+        appended_frame = pd.read_excel(file)
+        cols = appended_frame.columns
+        appended_frame = appended_frame.rename(
+            columns={cols[0]: 'offer',
+                     cols[1]: 'brand',
+                     cols[2]: 'code_1c',
+                     cols[3]: 'name_start'}).astype({'offer': str})
     proxies = config.proxies * 2 if doubling else config.proxies
     proxies = proxies[:thread_col] if (thread_col != 0) and (thread_col > 0) else proxies
     if type(work) is list:
@@ -48,7 +56,6 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
             frame = data.pop()
             for appended in data:
                 frame = frame.append(appended)
-            frame.to_excel('result.xlsx')
     else:
         assert not work.empty(), 'Ошибка очереди заданий'
         data = []
@@ -79,14 +86,24 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
                     w.start()
                 for w in works:
                     w.join()
-
         if data:
             frame, not_found = data.pop()
+            file_name = file.split('/')[-1]
+            file_name = file_name.replace('.' + file_name.split('.')[-1], '')
             for appended, not_found_appended in data:
                 frame = frame.append(appended)
                 not_found = not_found.append(not_found_appended)
-            frame.to_excel('result.xlsx')
-            not_found.to_excel('not_found.xlsx')
+            # TODO Прописать джоин appended frame к результатам поиска
+            if frame is not None:
+                if file:
+                    appended_frame = appended_frame.set_index('offer')
+                    frame = frame.join(appended_frame, rsuffix='исходное', how='left')
+                    need_columns = ['brand', 'code_1c', 'name_start', 'counter', 'rating', 'seller', 'id', 'name', 'partnum(ozon)', 'article(ozon)', 'link', 'photo', 'other_photo', 'finded']
+                    need_columns += [c for c in frame.columns if c not in need_columns]
+                    frame = frame[need_columns]
+                frame.to_excel(f'{file_name} result.xlsx')
+                # frame.to_excel('result.xlsx')
+            not_found.to_excel(f'{file_name} not_found.xlsx')
 
 
 def search(work, proxy):
@@ -122,7 +139,7 @@ if __name__ == '__main__':
             [queue.put((c, '')) for c in fr.index]
         else:
             [queue.put(c) for c in fr[fr.columns[0]].items()]
-        main(queue, break_after_first, thread_col, doubling)
+        main(queue, break_after_first, thread_col, doubling, file)
     except Exception as ex:
         logging.exception(ex, stack_info=True)
 
