@@ -1,3 +1,4 @@
+import copy
 import queue
 import random
 import logging
@@ -36,19 +37,9 @@ class Searcher:
     def __init__(self):
         self.session = requests.session()
 
-    def start_queue(self, work: queue.Queue, break_after_first: bool):
+    def start_queue(self, work: queue.Queue, search_in_description: bool):
         errors = 0
         done = 0
-        # result = pd.DataFrame(columns=['offer',
-        #                                'counter',
-        #                                'name',
-        #                                'link',
-        #                                'partnum(ozon)',
-        #                                'article(ozon)',
-        #                                'id',
-        #                                'photo',
-        #                                'rating',
-        #                                'finded']).set_index('offer')
         result = None
         not_found = pd.DataFrame(columns=['offer',
                                           'result']).set_index('offer')
@@ -57,13 +48,13 @@ class Searcher:
             offer = str(offer)
             print(f'Начали {brand} {offer}')
             try:
-                wait = random.randint(2, 6)
+                wait = random.randint(2, 5)
                 print(f'Ожидание - {wait} секунд')
                 time.sleep(wait)
                 search_result, data = self.search(f'{offer} {brand}'.strip())
                 print(f'Данные получены - {search_result}')
                 if search_result:
-                    links = self.find_correct_links(offer, data)
+                    links = self.find_correct_links(offer, data, search_in_description)
                     if not links.empty:
                         if result is None:
                             result = links
@@ -100,8 +91,9 @@ class Searcher:
             return False, 'Ошибка запроса данных о номенклатурах'
 
     @staticmethod
-    def find_correct_links(text, offers):
+    def find_correct_links(text, offers, search_in_description):
         find_count = 1
+        input_text = copy.deepcopy(text)
         correct_links = pd.DataFrame(
             columns=[
                 'offer',
@@ -118,13 +110,13 @@ class Searcher:
                 'finded',
             ]
         ).set_index(['offer', 'counter'])
-        for offer in offers:
+        for offer_counter, offer in enumerate(offers):
             try:
                 finded = []
                 offer_name = [
                     c for c in offer['mainState'] if ('id' in c.keys()) and (c['id'] == 'name')
                 ] \
-                    [0]['atom']['textAtom']['text'].replace('&#x2F;', '/').replace('&#34;', '"')
+                    [0]['atom']['textAtom']['text'].replace('&#x2F;', '/').replace('&#34;', '"').replace('&#39;', "'")
                 if find_count == 4:
                     break
                 if offer_name:
@@ -133,9 +125,21 @@ class Searcher:
                     if standartize(text) in cuted_name:
                         finded.append('наименование')
                     # TODO: Прописать сверки по партнам или артикулу + описанию товара
+                    partnum = ''
+                    article = ''
+                    link = offer['action']['link']
+                    link = link.replace(f'/{link.split("/")[-1]}', '') if not link[-1].isdigit() or len(link) > 140 else link
+                    if search_in_description:
+                        time_to_sleep = 3 + random.randint(0, 3)
+                        print(f'Начали сбор {offer_counter + 1} карточки. Ожидание - {time_to_sleep}c.')
+                        time.sleep(time_to_sleep)
+                        advanced_data = requests.get(f'https://api.ozon.ru/composer-api.bx/page/json/v2?url={link}').json()
+                        description = json.loads(advanced_data['seo']['script'][0]['innerHTML'])['description']
+                        if description:
+                            print('Описание получено')
+                        if standartize(text) in standartize(description):
+                            finded.append('описание')
                     if finded:
-                        partnum = ''
-                        article = ''
                         seller = ''
                         try:
                             labels = \
@@ -149,9 +153,6 @@ class Searcher:
                             print(f'Finded rating {rating}')
                         except IndexError:
                             rating = 0
-                        link = offer['action']['link']
-                        # link = link.replace(f'/{link.split("/")[-1]}', '') if len(link.split('/')[-1]) > 140 else link
-                        link = link.replace(f'/{link.split("/")[-1]}', '') if not link[-1].isdigit() or len(link) > 140 else link
                         link = 'https://ozon.ru' + link
                         photos = [c['image']['link'] for c in offer['tileImage']['items']]
                         photo = photos[0]
@@ -160,7 +161,7 @@ class Searcher:
                         else:
                             other_photo = ''
                         sku = link.split('-')[-1]
-                        correct_links.loc[(text, find_count), :] = [
+                        correct_links.loc[(input_text, find_count), :] = [
                             rating,
                             seller,
                             sku,
@@ -173,8 +174,9 @@ class Searcher:
                             ', '.join(finded).capitalize() + '.',
                         ]
                         find_count += 1
-            except Exception as ex:
-                print(ex)
+            except Exception as Ex:
+                logging.exception(Ex)
+                raise
         return correct_links.reset_index(drop=False).set_index('offer')
 
 

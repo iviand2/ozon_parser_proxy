@@ -6,7 +6,7 @@ import queue
 import searcher_new as searcher
 import math
 import data.config as config
-from PySimpleGUI import PopupGetFile
+from PySimpleGUI import PopupGetFile, PopupYesNo
 
 
 logging.basicConfig(filename='SEND ME TO ADMIN.log',
@@ -26,14 +26,14 @@ def pop_list(list_to_pop, num):
     return data
 
 
-def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: int, doubling: bool, file=''):
+def main(work: [queue.SimpleQueue, list], search_in_description: bool, thread_col: int, doubling: bool, file=''):
     if file:
         appended_frame = pd.read_excel(file, converters={0: str})
         cols = appended_frame.columns
         appended_frame = appended_frame.rename(
-            columns={cols[0]: 'offer',
+            columns={cols[2]: 'offer',
                      cols[1]: 'brand',
-                     cols[2]: 'code_1c',
+                     cols[0]: 'code_1c',
                      cols[3]: 'name_start'})
     proxies = config.proxies * 2 if doubling else config.proxies
     proxies = proxies[:thread_col] if (thread_col != 0) and (thread_col > 0) else proxies
@@ -62,7 +62,7 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
         works = [
             threading.Thread(
                 target=search_queue,
-                args=(work, proxy, break_after_first, data)
+                args=(work, proxy, search_in_description, data)
             ) for proxy in proxies
         ]
         wait = 5
@@ -79,7 +79,7 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
                 works = [
                     threading.Thread(
                         target=search_queue,
-                        args=(work, proxy, break_after_first, data)
+                        args=(work, proxy, search_in_description, data)
                     ) for proxy in proxies
                 ]
                 for w in works:
@@ -102,8 +102,12 @@ def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: i
                     need_columns += [c for c in frame.columns if c not in need_columns]
                     frame = frame[need_columns]
                 frame.to_excel(f'{file_name} result.xlsx')
-                # frame.to_excel('result.xlsx')
             not_found.to_excel(f'{file_name} not_found.xlsx')
+            input('Обработка завершена\n'
+                  f'Длина стартового массива - {len(appended_frame)}\n'
+                  f'Найдено артикулов - {len({c for c in frame.index})}\n'
+                  f'Не найдено артикулов - {len({c for c in not_found.index})}\n'
+                  'нажмите <Enter> для закрытия')
 
 
 def search(work, proxy):
@@ -111,14 +115,14 @@ def search(work, proxy):
     return searcher_bot.start(work, )
 
 
-def search_queue(work, proxy, break_after_first, data):
+def search_queue(work, proxy, search_in_description, data):
     while not work.empty():
         if update_webdriver_lock.locked():
             time.sleep(1)
             continue
         else:
             searcher_bot = searcher.Searcher()
-            result, not_found = searcher_bot.start_queue(work, break_after_first)
+            result, not_found = searcher_bot.start_queue(work, search_in_description)
             with lock:
                 data.append((result, not_found))
 
@@ -130,17 +134,19 @@ def function_to_thread(func, args, data):
 if __name__ == '__main__':
     try:
         file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.')
-        fr = pd.read_excel(file, converters={0: str})
-        fr = fr.set_index(fr.columns[0])
+        fr = pd.read_excel(file, converters={2: str})
+        fr = fr.set_index(fr.columns[2])
         doubling = False
-        break_after_first = True  # if Sg.PopupYesNo('Прерываемся после второго найденного?') == 'Yes' else False
+        search_in_description = True if PopupYesNo('Ищем в описании?\nПроцедура займет больше времени.') == 'Yes' else False
         thread_col = 1
         queue = queue.SimpleQueue()
         if fr.empty:
             [queue.put((c, '')) for c in fr.index]
         else:
-            [queue.put(c) for c in fr[fr.columns[0]].items()]
-        main(queue, break_after_first, thread_col, doubling, file)
+            [queue.put(c) for c in fr[fr.columns[1]].items()]
+        main(queue, search_in_description, thread_col, doubling, file)
     except Exception as ex:
         logging.exception(ex, stack_info=True)
+        print(ex)
+        input('Во время выполнения возникла ошибка нажмите <Enter> для закрытия')
 
