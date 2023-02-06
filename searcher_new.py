@@ -110,6 +110,7 @@ class Searcher:
                 'finded',
             ]
         ).set_index(['offer', 'counter'])
+        print(f'Начали распознавание, количество карточек - {len(offers)}')
         for offer_counter, offer in enumerate(offers):
             try:
                 finded = []
@@ -118,6 +119,7 @@ class Searcher:
                 ] \
                     [0]['atom']['textAtom']['text'].replace('&#x2F;', '/').replace('&#34;', '"').replace('&#39;', "'")
                 if find_count == 4:
+                    print(f'Найдено совпадений - {find_count - 1}, разрываем цикл. всего перебрано вариантов - {offer_counter}')
                     break
                 if offer_name:
                     cuted_name = standartize(offer_name)
@@ -140,6 +142,7 @@ class Searcher:
                         if standartize(text) in standartize(description):
                             finded.append('описание')
                     if finded:
+                        print('Найдено совпадение')
                         seller = ''
                         try:
                             labels = \
@@ -160,7 +163,9 @@ class Searcher:
                             other_photo = ' '.join(photos[1:])
                         else:
                             other_photo = ''
-                        sku = link.split('-')[-1]
+                        sku = link.split('-')[-1].replace('https://ozon.ru/product/', '')
+                        if sku == '821456315':
+                            print(sku)
                         correct_links.loc[(input_text, find_count), :] = [
                             rating,
                             seller,
@@ -178,6 +183,3 @@ class Searcher:
                 logging.exception(Ex)
                 raise
         return correct_links.reset_index(drop=False).set_index('offer')
-
-
-

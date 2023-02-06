@@ -149,4 +149,3 @@ if __name__ == '__main__':
         logging.exception(ex, stack_info=True)
         print(ex)
         input('Во время выполнения возникла ошибка нажмите <Enter> для закрытия')
-
