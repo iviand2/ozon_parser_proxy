@@ -6,6 +6,13 @@ import json
 import requests
 import pandas as pd
 import time
+import collections.abc
+# hyper needs the four following aliases to be done manually.
+collections.Iterable = collections.abc.Iterable
+collections.Mapping = collections.abc.Mapping
+collections.MutableSet = collections.abc.MutableSet
+collections.MutableMapping = collections.abc.MutableMapping
+from hyper.contrib import HTTP20Adapter
 
 logging.basicConfig(filename='SEND ME TO ADMIN.log',
                     format='%s\nSearcher_new :: [{asctime}]\n{message}\n' % ('_'*83),
@@ -36,6 +43,57 @@ def standartize(text):
 class Searcher:
     def __init__(self):
         self.session = requests.session()
+        self.session.mount('https://', HTTP20Adapter())
+        # self.session.proxies = {
+        #     # 'http': 'localhost:8080',
+        #     'https': '127.0.0.1:8080'
+        # }
+
+
+        self.session.headers['Accept-Encoding'] = 'gzip, deflate'
+        self.session.headers['User-Agent'] = 'ozonapp_android'
+        self.session.headers['Accept'] = 'application/json; charset=utf-8'
+        # self.session.headers['Host'] = 'api.ozon.ru'
+        # self.session.headers['Connection'] = 'close'
+        # self.session.headers['Authorization'] = 'Bearer 3.0.Ni1g1IbLSm6_zNxVuNtGXw.28.l8cMBQAAAABjv7CpM-4Iu6phbmRyb2lkYXBwoDmAkKA..20230206133757.fLLcdYrha7VWIParasKREV8Wx4baAr8Ofp8Ry1D_qL4'
+        self.session.headers['X-O3-Sample-Trace'] = 'false'
+        self.session.headers['X-O3-App-Name'] = 'ozonapp_android'
+        # self.session.headers['X-O3-App-Version'] = '15.0(2272)'
+        # self.session.headers['X-O3-Fp'] = 'Y6Kmew3iVaAPD4Tn1ECWaSK8sh31YBKyLDbl3Bz3K45hExx+BKRW'
+        # self.session.headers['Mobile-Gaid'] = '8545bbb8-93f2-417d-911e-d7461b394ee8'
+        # self.session.headers['Mobile-Lat'] = '0'
+
+
+        # self.session.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv: 109.0) Gecko/20100101 Firefox/109.0'
+        # self.session.headers['Accept'] = \
+        #         'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+        # # del self.session.headers['Accept']
+        # self.session.headers['Alt-Used'] = 'api.ozon.ru'
+        # self.session.headers['Sec-Fetch-Dest'] = 'document'
+        # self.session.headers['Sec-Fetch-Mode'] = 'navigate'
+        # self.session.headers['Sec-Fetch-Site'] = 'none'
+        # self.session.headers['Sec-Fetch-User'] = '?1'
+        # self.session.headers['Upgrade-Insecure-Requests'] = '1'
+        # self.session.headers['Host'] = 'api.ozon.ru'
+        # self.session.headers['Connection'] = 'close'
+        # self.session.headers['Sec-Ch-Ua'] = '"Chromium";v="109", "Not_A Brand";v="99"'
+        # self.session.headers['Sec-Ch-Ua-Platform'] = '"Windows"'
+        # self.session.headers['Sec-Ch-Ua-Mobile'] = '?0'
+        # icon_head = {
+        #     'Accept': 'image/avif,image/webp,*/*',
+        #     'Accept-Encoding': 'gzip, deflate, br',
+        #     'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+        #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv: 109.0) Gecko/20100101 Firefox/109.0',
+        #     # 'Host': 'api.ozon.ru',
+        #     # 'Referer': 'https://api.ozon.ru/'
+        # }
+        # self.session.headers = icon_head
+        # resp = self.session.get('https://api.ozon.ru/favicon.ico', headers=icon_head, allow_redirects=False)
+        # if resp.status_code == 301:
+        # try:
+        #     resp = self.session.get('https://api.ozon.ru/favicon.ico', headers=icon_head, allow_redirects=True)
+        # except requests.exceptions.TooManyRedirects:
+        #     pass
 
     def start_queue(self, work: queue.Queue, search_in_description: bool):
         errors = 0
@@ -76,8 +134,11 @@ class Searcher:
 
     def search(self, text):
         try:
+            url = f'https://api.ozon.ru/composer-api.bx/page/json/v2?url=/search/?text={text}&sorting=rating&from_global=true&anchor=false'
             resp = self.session.get(
-                f'https://api.ozon.ru/composer-api.bx/page/json/v2?url=/search/?text={text}&sorting=rating&from_global=true&anchor=false'
+                url,
+                # verify=False,
+                # headers=head
             )
             data = resp.json()
             key = [c for c in data["widgetStates"].keys() if ('searchResultsV2' in c) or ('searchResultsError' in c)][0]
