@@ -36,7 +36,7 @@ def standartize(text):
 
 
 class Searcher:
-    def __init__(self, debug_logger: logging.Logger):
+    def __init__(self, debug_logger: logging.Logger = None):
         if not debug_logger:
             debug = logging.getLogger(__file__)
             debug.setLevel(logging.DEBUG)
@@ -49,7 +49,7 @@ class Searcher:
             debug_handler.setFormatter(debug_formatter)
             debug.addHandler(debug_handler)
             debug.debug('Настройка debug завершена')
-            self.debug = debug_logger
+            self.debug = debug
         else:
             self.debug = debug_logger
         self.session = requests.session()
