@@ -25,7 +25,7 @@ def pop_list(list_to_pop, num):
     return data
 
 
-def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: int, doubling: bool, file):
+def main(work: [queue.SimpleQueue, list], break_after_first: bool, thread_col: int, doubling: bool):
     proxies = config.proxies * 2 if doubling else config.proxies
     proxies = proxies[:thread_col] if (thread_col != 0) and (thread_col > 0) else proxies
     assert not work.empty(), 'Ошибка очереди заданий'
@@ -90,8 +90,11 @@ if __name__ == '__main__':
         break_after_first = True  # if Sg.PopupYesNo('Прерываемся после второго найденного?') == 'Yes' else False
         thread_col = 1
         queue = queue.SimpleQueue()
-        [queue.put((str(c).replace('.0', ''), '')) for c in fr.index if pd.notna(c)]
-        main(queue, break_after_first, thread_col, doubling, file)
+        if fr.empty:
+            [queue.put((c, '')) for c in fr.index]
+        else:
+            [queue.put(c) for c in fr[fr.columns[0]].items()]
+        main(queue, break_after_first, thread_col, doubling)
     except Exception as ex:
         logging.exception(ex, stack_info=True)
 
