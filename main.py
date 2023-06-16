@@ -28,7 +28,7 @@ def pop_list(list_to_pop, num):
 
 def main(work: [queue.SimpleQueue, list], search_in_description: bool, thread_col: int, doubling: bool, file=''):
     if file:
-        appended_frame = pd.read_excel(file, converters={0: str})
+        appended_frame = pd.read_excel(file, converters={0: str, 2: str})
         cols = appended_frame.columns
         appended_frame = appended_frame.rename(
             columns={cols[2]: 'offer',
@@ -101,8 +101,8 @@ def main(work: [queue.SimpleQueue, list], search_in_description: bool, thread_co
                     need_columns = ['brand', 'code_1c', 'name_start', 'counter', 'rating', 'seller', 'id', 'name', 'partnum(ozon)', 'article(ozon)', 'link', 'photo', 'other_photo', 'finded']
                     need_columns += [c for c in frame.columns if c not in need_columns]
                     frame = frame[need_columns]
-                frame.to_excel(f'{file_name} result.xlsx')
-            not_found.to_excel(f'{file_name} not_found.xlsx')
+                frame.to_excel(f'{file_name} {" (desc) " if search_in_description else ""}result.xlsx')
+            not_found.to_excel(f'{file_name} {" (desc) " if search_in_description else ""}not_found.xlsx')
             input('Обработка завершена\n'
                   f'Длина стартового массива - {len(appended_frame)}\n'
                   f'Найдено артикулов - {len({c for c in frame.index})}\n'
@@ -133,7 +133,8 @@ def function_to_thread(func, args, data):
 
 if __name__ == '__main__':
     try:
-        file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.')
+        file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.\n'
+                            'Поряок столбцов: Код 1с, Бренд, Partnum')
         fr = pd.read_excel(file, converters={2: str})
         fr = fr.set_index(fr.columns[2])
         doubling = False

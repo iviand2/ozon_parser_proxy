@@ -180,13 +180,16 @@ class Searcher:
                         time_to_sleep = 3 + random.randint(0, 3)
                         self.debug_print(f'Начали сбор {offer_counter + 1} карточки. Ожидание - {time_to_sleep}c.')
                         time.sleep(time_to_sleep)
-                        advanced_data = requests.get(f'https://api.ozon.ru/composer-api.bx/page/json/v2?url={link}').json()
+                        advanced_data = self.session.get(f'https://api.ozon.ru/composer-api.bx/page/json/v2?url={link}').json()
                         try:
                             description = json.loads(advanced_data['seo']['script'][0]['innerHTML'])['description']
                         except KeyError:
-                            self.debug_print('Описание в проверяемой карточке не обнаружено')
+                            self.debug_print(f'Описание в проверяемой карточке не обнаружено {advanced_data.setdefault("incidentId", "")}')
                         if description:
                             print('Описание получено')
+                        else:
+                            pass
+                            # print('Описание пустое')
                         if standartize(text) in standartize(description):
                             finded.append('описание')
                     if finded:
