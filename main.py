@@ -134,7 +134,7 @@ def function_to_thread(func, args, data):
 if __name__ == '__main__':
     try:
         file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.\n'
-                            'Поряок столбцов: Код 1с, Бренд, Partnum')
+                            'Порядок столбцов: Код 1с, Бренд, Partnum')
         fr = pd.read_excel(file, converters={2: str})
         fr = fr.set_index(fr.columns[2])
         doubling = False
