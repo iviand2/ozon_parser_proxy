@@ -224,7 +224,7 @@ if __name__ == '__main__':
         file = values.setdefault('file', '')
         save_directory = values.setdefault('save_directory', '')
         search_in_description = values.setdefault('search_in_description', False)
-        part_size = values.setdefault('part_size', 50)
+        part_size = int(values.setdefault('part_size', '50'))
 
         # file = PopupGetFile('Пожалуйста, укажите файл эксель с артикулами для поиска.\n'
         #                     'Порядок столбцов: Код 1с, Бренд, Partnum')
